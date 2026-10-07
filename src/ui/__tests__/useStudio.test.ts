@@ -36,4 +36,26 @@ describe('useStudio', () => {
     const existing = { id:'old',title:'旧作品',emotion:'温柔姐姐' as const,confidence:.8,features:{loudness:.2,dynamics:.2,pitch:.4,zeroCrossing:.2,pauseRatio:.3,tempoVariation:.2},audio:new Blob(['a']),duration:1,cover:new Blob(['c']),coverConfig:coverPresetFor('温柔姐姐'),createdAt:'2026-10-05' };
     studio.editMeme(existing); expect(studio.draft.title).toBe('旧作品'); expect(studio.stage.value).toBe('cover');
   });
+  it('refuses to save an out-of-bounds bubble and keeps the work unsaved', async () => {
+    const saved: VoiceMeme[] = [];
+    const studio = useStudio(dependencies({ repository: { list:async()=>saved, save:async(m)=>{saved.push(m)}, rename:async()=>{}, delete:async()=>{} } }));
+    studio.draft.audio = new Blob(['a']); studio.draft.duration = 1;
+    studio.cover.value = { ...coverPresetFor('元气满满'), layout: { x: 0.01, y: 0.7, fontScale: 1, maxWidth: 0.8 } };
+    studio.emotion.value = { label:'元气满满',confidence:.9,explanation:'高能量',scores:{'暴躁老哥':0,'温柔姐姐':0,'阴阳怪气':0,'元气满满':1} };
+    studio.features.value = { loudness:.8,dynamics:.6,pitch:.7,zeroCrossing:.5,pauseRatio:.1,tempoVariation:.5 };
+    await studio.save();
+    expect(studio.error.value).toContain('边界');
+    expect(saved).toHaveLength(0);
+  });
+  it('migrates legacy works without layout explicitly when entering the editor', async () => {
+    const studio = useStudio(dependencies());
+    const legacyConfig = { ...coverPresetFor('暴躁老哥') }; delete legacyConfig.layout;
+    const legacy = { id:'legacy',title:'旧封面',emotion:'暴躁老哥' as const,confidence:.7,features:{loudness:.5,dynamics:.5,pitch:.5,zeroCrossing:.5,pauseRatio:.5,tempoVariation:.5},audio:new Blob(['a']),duration:2,cover:new Blob(['c']),coverConfig:legacyConfig,createdAt:'2026-09-01' };
+    studio.editMeme(legacy);
+    expect(studio.cover.value.layout).toBeDefined();
+    expect(studio.notice.value).toContain('旧版封面');
+    const modern = { ...legacy, id:'modern', coverConfig: coverPresetFor('元气满满') };
+    studio.editMeme(modern);
+    expect(studio.notice.value).toBe('');
+  });
 });

@@ -3,12 +3,25 @@ export type StudioStage = 'record' | 'crop' | 'emotion' | 'cover' | 'collection'
 export interface CropRange { start: number; end: number }
 export interface AudioFeatures { loudness: number; dynamics: number; pitch: number; zeroCrossing: number; pauseRatio: number; tempoVariation: number }
 export interface EmotionResult { label: EmotionLabel; confidence: number; explanation: string; scores: Record<EmotionLabel, number> }
+export interface BubbleLayout {
+  /** 气泡中心相对画面宽的位置，0..1 */
+  x: number;
+  /** 气泡中心相对画面高的位置，0..1 */
+  y: number;
+  /** 相对基准字号（900px 宽画面下 42px）的缩放，最小 0.7 */
+  fontScale: number;
+  /** 气泡盒最大宽度，相对画面宽 0..1，决定换行 */
+  maxWidth: number;
+}
 export interface CoverConfig {
   label: EmotionLabel;
   title: string;
   bubbleText: string;
+  /** 旧版百分比坐标，仅在没有 layout 的旧作品/旧分享链接中使用 */
   bubbleX: number;
   bubbleY: number;
+  /** 归一化气泡布局；旧作品可能缺失，进入编辑时再迁移 */
+  layout?: BubbleLayout;
   palette: [string, string, string];
   filter: 'none' | 'mono' | 'saturate' | 'warm' | 'cool';
   ratio: 'square' | 'portrait';
