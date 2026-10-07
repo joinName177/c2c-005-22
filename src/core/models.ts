@@ -3,6 +3,19 @@ export type StudioStage = 'record' | 'crop' | 'emotion' | 'cover' | 'collection'
 export interface CropRange { start: number; end: number }
 export interface AudioFeatures { loudness: number; dynamics: number; pitch: number; zeroCrossing: number; pauseRatio: number; tempoVariation: number }
 export interface EmotionResult { label: EmotionLabel; confidence: number; explanation: string; scores: Record<EmotionLabel, number> }
+export type LayoutStrategy = 'manual' | 'move' | 'wrap' | 'scale';
+export interface BubbleLayout {
+  version: 1;
+  /** 气泡中心 x，占画面宽度百分比 0..100 */
+  x: number;
+  /** 气泡中心 y，占画面高度百分比 0..100 */
+  y: number;
+  /** 字号占画面宽度百分比（42px / 900 = 4.667），预览缩放时不漂移 */
+  fontPct: number;
+  /** 换行排版宽度占画面宽度百分比；仅 strategy 为 wrap/scale 时生效 */
+  widthPct: number;
+  strategy: LayoutStrategy;
+}
 export interface CoverConfig {
   label: EmotionLabel;
   title: string;
@@ -12,6 +25,8 @@ export interface CoverConfig {
   palette: [string, string, string];
   filter: 'none' | 'mono' | 'saturate' | 'warm' | 'cool';
   ratio: 'square' | 'portrait';
+  /** 缺失表示旧作品：保持原始排版，不做碰撞检测，直到用户在编辑中明确启用 */
+  layout?: BubbleLayout;
 }
 export interface VoiceMeme {
   id: string;

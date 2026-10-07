@@ -36,4 +36,31 @@ describe('useStudio', () => {
     const existing = { id:'old',title:'旧作品',emotion:'温柔姐姐' as const,confidence:.8,features:{loudness:.2,dynamics:.2,pitch:.4,zeroCrossing:.2,pauseRatio:.3,tempoVariation:.2},audio:new Blob(['a']),duration:1,cover:new Blob(['c']),coverConfig:coverPresetFor('温柔姐姐'),createdAt:'2026-10-05' };
     studio.editMeme(existing); expect(studio.draft.title).toBe('旧作品'); expect(studio.stage.value).toBe('cover');
   });
+  it('blocks save when the bubble collides and never invokes the renderer or repository', async () => {
+    let renders = 0; let saves = 0;
+    const studio = useStudio(dependencies({
+      renderer: { render: async () => { renders += 1; return new Blob(['cover'], { type: 'image/png' }); } },
+      repository: { list: async () => [], save: async () => { saves += 1; }, rename: async () => {}, delete: async () => {} },
+    }));
+    studio.draft.audio = new Blob(['a']); studio.draft.duration = 1; studio.emotion.value = { label:'元气满满',confidence:.8,explanation:'',scores:{'暴躁老哥':0,'温柔姐姐':0,'阴阳怪气':0,'元气满满':1} };
+    studio.features.value = { loudness:.7,dynamics:.5,pitch:.8,zeroCrossing:.6,pauseRatio:.1,tempoVariation:.6 };
+    studio.cover.value = coverPresetFor('元气满满');
+    studio.patchCover({ layout: { ...studio.cover.value.layout!, x: 50, y: 43 } });
+    await studio.save();
+    expect(studio.error.value).toContain('冲突');
+    expect(renders).toBe(0);
+    expect(saves).toBe(0);
+  });
+  it('allows saving old works without layout information unchanged', async () => {
+    let saved: VoiceMeme | undefined;
+    const studio = useStudio(dependencies({
+      repository: { list: async () => [], save: async (m) => { saved = m; }, rename: async () => {}, delete: async () => {} },
+    }));
+    studio.draft.audio = new Blob(['a']); studio.draft.duration = 1; studio.emotion.value = { label:'温柔姐姐',confidence:.8,explanation:'',scores:{'暴躁老哥':0,'温柔姐姐':1,'阴阳怪气':0,'元气满满':0} };
+    studio.features.value = { loudness:.2,dynamics:.2,pitch:.4,zeroCrossing:.2,pauseRatio:.3,tempoVariation:.2 };
+    const legacy = coverPresetFor('温柔姐姐'); delete legacy.layout;
+    studio.cover.value = legacy;
+    await studio.save();
+    expect(saved?.coverConfig.layout).toBeUndefined();
+  });
 });
